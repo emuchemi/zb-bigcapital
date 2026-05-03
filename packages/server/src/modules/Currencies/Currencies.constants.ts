@@ -1,9 +1,10 @@
 export const InitialCurrencies = [
-  'USD',
+  'TZS', // Z&B: base currency — Tanzanian Shilling
+  'USD', // Z&B: primary foreign currency
+  'EUR', // Z&B: guest payments
+  'GBP', // Z&B: guest payments
   'CAD',
-  'EUR',
   'LYD',
-  'GBP',
   'CNY',
   'AUD',
   'INR',

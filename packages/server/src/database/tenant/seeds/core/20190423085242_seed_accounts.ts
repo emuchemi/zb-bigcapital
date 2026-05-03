@@ -1,5 +1,5 @@
 import { TenantSeeder } from '@/libs/migration-seed/TenantSeeder';
-import { AccountsData } from '../data/accounts';
+import { AccountsData } from '../data/zb-accounts'; // Z&B: replaced default with Z&B chart of accounts
 
 export default class SeedAccounts extends TenantSeeder {
   /**

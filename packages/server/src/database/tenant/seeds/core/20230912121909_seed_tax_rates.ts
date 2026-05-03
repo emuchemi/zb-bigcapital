@@ -1,5 +1,5 @@
 import { TenantSeeder } from '@/libs/migration-seed/TenantSeeder';
-import { InitialTaxRates } from '../data/TaxRates';
+import { ZBTaxRates as InitialTaxRates } from '../data/zb-tax-rates'; // Z&B: replaced default with Zanzibar-specific rates
 
 export default class SeedTaxRates extends TenantSeeder {
   /**
