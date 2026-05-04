@@ -81,6 +81,7 @@ import { PaymentLinksModule } from '../PaymentLinks/PaymentLinks.module';
 // Z&B custom modules
 import { ZBHospitalityChargesModule } from '../ZBHospitalityCharges/ZBHospitalityCharges.module';
 import { ZBComplianceModule } from '../ZBCompliance/ZBCompliance.module';
+import { ZBDashboardModule } from '../ZBDashboard/ZBDashboard.module';
 import { RolesModule } from '../Roles/Roles.module';
 import { SubscriptionModule } from '../Subscription/Subscription.module';
 import { OrganizationModule } from '../Organization/Organization.module';
@@ -246,6 +247,7 @@ import { AppThrottleModule } from './AppThrottle.module';
     // Z&B custom modules
     ZBHospitalityChargesModule,
     ZBComplianceModule,
+    ZBDashboardModule,
     RolesModule,
     SubscriptionModule,
     OrganizationModule,
