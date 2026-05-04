@@ -78,6 +78,9 @@ import { InventoryCostModule } from '../InventoryCost/InventoryCost.module';
 import { WarehousesTransfersModule } from '../WarehousesTransfers/WarehouseTransfers.module';
 import { DashboardModule } from '../Dashboard/Dashboard.module';
 import { PaymentLinksModule } from '../PaymentLinks/PaymentLinks.module';
+// Z&B custom modules
+import { ZBHospitalityChargesModule } from '../ZBHospitalityCharges/ZBHospitalityCharges.module';
+import { ZBComplianceModule } from '../ZBCompliance/ZBCompliance.module';
 import { RolesModule } from '../Roles/Roles.module';
 import { SubscriptionModule } from '../Subscription/Subscription.module';
 import { OrganizationModule } from '../Organization/Organization.module';
@@ -240,6 +243,9 @@ import { AppThrottleModule } from './AppThrottle.module';
     StripePaymentModule,
     DashboardModule,
     PaymentLinksModule,
+    // Z&B custom modules
+    ZBHospitalityChargesModule,
+    ZBComplianceModule,
     RolesModule,
     SubscriptionModule,
     OrganizationModule,

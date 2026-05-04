@@ -6,6 +6,7 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsInt,
   IsISO4217CurrencyCode,
   IsNotEmpty,
@@ -15,6 +16,40 @@ import {
   MaxLength,
   ValidateNested,
 } from 'class-validator';
+
+// ── Z&B enums ────────────────────────────────────────────────────────────────
+
+export enum ZBExpenseStatus {
+  Draft = 'draft',
+  PendingReview = 'pending_review',
+  Posted = 'posted',
+}
+
+export enum ZBProjectSite {
+  HotelOperations = 'hotel_operations',
+  ConstructionRenovation = 'construction_renovation',
+  GuestService = 'guest_service',
+  Staff = 'staff',
+  Maintenance = 'maintenance',
+  Utilities = 'utilities',
+  PermitsLicences = 'permits_licences',
+  ProfessionalServices = 'professional_services',
+  Marketing = 'marketing',
+  Technology = 'technology',
+  Transport = 'transport',
+  FoodBeverage = 'food_beverage',
+  Other = 'other',
+}
+
+export enum ZBPaymentMethod {
+  Cash = 'cash',
+  MobileMoney = 'mobile_money',
+  BankTransfer = 'bank_transfer',
+  Stripe = 'stripe',
+  Card = 'card',
+  OtaPayout = 'ota_payout',
+  Other = 'other',
+}
 
 class AttachmentDto {
   @IsString()
@@ -176,14 +211,122 @@ export class CommandExpenseDto {
   @IsOptional()
   @ApiProperty({
     description: 'The attachments of the expense',
-    example: [
-      {
-        key: '123456',
-      },
-    ],
+    example: [{ key: '123456' }],
   })
   attachments?: AttachmentDto[];
+
+  // ── Z&B fields ─────────────────────────────────────────────────────────────
+
+  @IsEnum(ZBExpenseStatus)
+  @IsOptional()
+  @ApiProperty({
+    description: 'Z&B workflow status. Defaults to draft on creation.',
+    enum: ZBExpenseStatus,
+    example: ZBExpenseStatus.Draft,
+  })
+  zbStatus?: ZBExpenseStatus;
+
+  @IsEnum(ZBProjectSite)
+  @IsOptional()
+  @ApiProperty({
+    description: 'Project or cost centre this expense belongs to.',
+    enum: ZBProjectSite,
+    example: ZBProjectSite.HotelOperations,
+  })
+  projectSite?: ZBProjectSite;
+
+  @IsEnum(ZBPaymentMethod)
+  @IsOptional()
+  @ApiProperty({
+    description: 'Payment method used for this expense.',
+    enum: ZBPaymentMethod,
+    example: ZBPaymentMethod.Cash,
+  })
+  paymentMethod?: ZBPaymentMethod;
+
+  @IsBoolean()
+  @Transform(({ value }) => parseBoolean(value, false))
+  @IsOptional()
+  @ApiProperty({
+    description: 'True if this expense came from the petty cash float.',
+    example: false,
+  })
+  isPettyCash?: boolean;
+
+  @IsBoolean()
+  @Transform(({ value }) => parseBoolean(value, false))
+  @IsOptional()
+  @ApiProperty({
+    description: 'True if this should be capitalised as a fixed asset (capex).',
+    example: false,
+  })
+  isCapex?: boolean;
+
+  @IsBoolean()
+  @Transform(({ value }) => parseBoolean(value, false))
+  @IsOptional()
+  @ApiProperty({
+    description: 'True if this expense is reimbursable by a guest or third party.',
+    example: false,
+  })
+  isReimbursable?: boolean;
+
+  @ToNumber()
+  @IsNumber()
+  @IsOptional()
+  @ApiProperty({
+    description: 'Gross amount before payment processing fees.',
+    example: 100.0,
+  })
+  grossAmount?: number;
+
+  @ToNumber()
+  @IsNumber()
+  @IsOptional()
+  @ApiProperty({
+    description: 'Fee charged by bank, Stripe, mobile money, or OTA.',
+    example: 2.9,
+  })
+  feeAmount?: number;
+
+  @ToNumber()
+  @IsInt()
+  @IsOptional()
+  @ApiProperty({
+    description: 'Account ID to debit fees to (e.g. Stripe Fees account).',
+    example: 1,
+  })
+  feeAccountId?: number;
+
+  @ToNumber()
+  @IsNumber()
+  @IsOptional()
+  @ApiProperty({
+    description: 'Net amount after fees (grossAmount - feeAmount).',
+    example: 97.1,
+  })
+  netAmount?: number;
+
+  @IsString()
+  @MaxLength(2000)
+  @IsOptional()
+  @ApiProperty({
+    description: 'Extended notes for the accountant or reviewer.',
+    example: 'Paid in cash to Mohamed for daily cleaning supplies.',
+  })
+  zbNotes?: string;
 }
 
-export class CreateExpenseDto extends CommandExpenseDto { }
-export class EditExpenseDto extends CommandExpenseDto { }
+export class CreateExpenseDto extends CommandExpenseDto {}
+export class EditExpenseDto extends CommandExpenseDto {}
+
+export class SubmitExpenseDto {
+  @IsString()
+  @IsOptional()
+  @MaxLength(2000)
+  @ApiProperty({
+    description: 'Optional note to the accountant when submitting for review.',
+    example: 'Please verify the category for this purchase.',
+  })
+  note?: string;
+}

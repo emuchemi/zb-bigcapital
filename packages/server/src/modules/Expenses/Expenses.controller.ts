@@ -165,11 +165,41 @@ export class ExpensesController {
   @ApiResponse({
     status: 200,
     description: 'The expense transaction have been successfully retrieved.',
-    schema: {
-      $ref: getSchemaPath(ExpenseResponseDto),
-    },
+    schema: { $ref: getSchemaPath(ExpenseResponseDto) },
   })
   public getExpense(@Param('id') expenseId: number) {
     return this.expensesApplication.getExpense(expenseId);
+  }
+
+  // ── Z&B Expense Inbox ─────────────────────────────────────────────────────
+
+  @Get('zb/inbox')
+  @RequirePermission(ExpenseAction.View, AbilitySubject.Expense)
+  @ApiOperation({
+    summary: 'Z&B: Expense inbox — all draft and pending_review expenses.',
+  })
+  public getExpenseInbox() {
+    return this.expensesApplication.getExpenseInbox();
+  }
+
+  @Get('zb/inbox/count')
+  @RequirePermission(ExpenseAction.View, AbilitySubject.Expense)
+  @ApiOperation({ summary: 'Z&B: Count of expenses awaiting review.' })
+  public getExpenseInboxCount() {
+    return this.expensesApplication.getExpenseInboxCount();
+  }
+
+  @Post(':id/zb/submit')
+  @RequirePermission(ExpenseAction.Edit, AbilitySubject.Expense)
+  @ApiOperation({ summary: 'Z&B: Submit expense for accountant review.' })
+  public submitExpenseForReview(@Param('id') expenseId: number) {
+    return this.expensesApplication.submitExpenseForReview(expenseId);
+  }
+
+  @Post(':id/zb/return-to-draft')
+  @RequirePermission(ExpenseAction.Edit, AbilitySubject.Expense)
+  @ApiOperation({ summary: 'Z&B: Return expense to draft for correction.' })
+  public returnExpenseToDraft(@Param('id') expenseId: number) {
+    return this.expensesApplication.returnExpenseToDraft(expenseId);
   }
 }

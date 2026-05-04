@@ -10,6 +10,8 @@ import { CreateExpenseDto, EditExpenseDto } from './dtos/Expense.dto';
 import { GetExpensesQueryDto } from './dtos/GetExpensesQuery.dto';
 import { BulkDeleteExpensesService } from './BulkDeleteExpenses.service';
 import { ValidateBulkDeleteExpensesService } from './ValidateBulkDeleteExpenses.service';
+import { GetExpenseInboxService } from './queries/GetExpenseInbox.service';
+import { SubmitExpenseForReviewService } from './commands/SubmitExpenseForReview.service';
 
 @Injectable()
 export class ExpensesApplication {
@@ -22,7 +24,9 @@ export class ExpensesApplication {
     private readonly getExpensesService: GetExpensesService,
     private readonly bulkDeleteExpensesService: BulkDeleteExpensesService,
     private readonly validateBulkDeleteExpensesService: ValidateBulkDeleteExpensesService,
-  ) { }
+    private readonly getExpenseInboxService: GetExpenseInboxService,
+    private readonly submitExpenseForReviewService: SubmitExpenseForReviewService,
+  ) {}
 
   /**
    * Create a new expense transaction.
@@ -100,5 +104,25 @@ export class ExpensesApplication {
    */
   public getExpenses(filterDTO: GetExpensesQueryDto) {
     return this.getExpensesService.getExpensesList(filterDTO);
+  }
+
+  /** Z&B: Returns all expenses in draft or pending_review state. */
+  public getExpenseInbox() {
+    return this.getExpenseInboxService.getExpenseInbox();
+  }
+
+  /** Z&B: Returns the count of expenses awaiting review. */
+  public getExpenseInboxCount() {
+    return this.getExpenseInboxService.getExpenseInboxCount();
+  }
+
+  /** Z&B: Moves an expense from draft to pending_review. */
+  public submitExpenseForReview(expenseId: number) {
+    return this.submitExpenseForReviewService.submitForReview(expenseId);
+  }
+
+  /** Z&B: Returns a pending_review expense back to draft. */
+  public returnExpenseToDraft(expenseId: number) {
+    return this.submitExpenseForReviewService.returnToDraft(expenseId);
   }
 }

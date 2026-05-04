@@ -38,6 +38,19 @@ export class Expense extends TenantBaseModel {
   paymentAccount!: Account;
   attachments!: Document[];
 
+  // Z&B extended fields
+  zbStatus!: 'draft' | 'pending_review' | 'posted';
+  projectSite?: string;
+  paymentMethod?: string;
+  isPettyCash!: boolean;
+  isCapex!: boolean;
+  isReimbursable!: boolean;
+  grossAmount?: number;
+  feeAmount?: number;
+  feeAccountId?: number;
+  netAmount?: number;
+  zbNotes?: string;
+
   /**
    * Table name
    */
