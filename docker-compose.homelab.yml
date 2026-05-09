@@ -12,7 +12,7 @@
 # Logs:   docker compose -f docker-compose.homelab.yml logs -f
 # ============================================================
 
-version: '3.8'
+# version field removed — obsolete in Docker Compose v2+
 
 services:
 
@@ -153,12 +153,17 @@ services:
       - API_RATE_LIMIT=${API_RATE_LIMIT:-120,60,600}
 
   # ── Database migration ─────────────────────────────────────
-  # Runs all Z&B migrations using the custom-built server image.
-  # Exits automatically when done. Safe to re-run on every deploy.
-  # Uses the same image as the server so our new tables are always created.
+  # Runs all Z&B migrations. Exits automatically when done.
+  #
+  # IMPORTANT: uses build: (same Dockerfile as server) so Docker builds it
+  # from local source instead of trying to pull 'zb-bigcapital-server' from
+  # Docker Hub (which would fail). Docker layer-caches the build, so this
+  # shares compiled output with the server service and adds no extra compile time.
   database_migration:
     container_name: zb-database-migration
-    image: zb-bigcapital-server
+    build:
+      context: ./
+      dockerfile: packages/server/Dockerfile
     command: >
       sh -c "
         node packages/server/dist/cli.js system:migrate:latest &&
