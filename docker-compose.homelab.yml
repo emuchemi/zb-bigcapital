@@ -287,9 +287,16 @@ services:
       - MINIO_BUCKET=${MINIO_BUCKET:-zb-attachments}
     entrypoint: >
       /bin/sh -c "
+      echo 'Connecting to MinIO...' &&
       mc alias set zb http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
-      mc mb --ignore-existing zb/$$MINIO_BUCKET &&
-      mc anonymous set none zb/$$MINIO_BUCKET &&
+      echo 'Creating bucket (retrying if IAM is still initialising)...' &&
+      TRIES=0 &&
+      until mc mb --ignore-existing zb/$$MINIO_BUCKET; do
+        TRIES=$$(($$TRIES+1)) &&
+        if [ $$TRIES -ge 10 ]; then echo 'ERROR: bucket creation failed after 10 attempts'; exit 1; fi &&
+        echo \"Attempt $$TRIES failed, retrying in 3s...\" &&
+        sleep 3 ;
+      done &&
       echo 'MinIO bucket ready: '$$MINIO_BUCKET
       "
     restart: 'no'
