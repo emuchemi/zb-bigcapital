@@ -164,10 +164,14 @@ services:
     build:
       context: ./
       dockerfile: packages/server/Dockerfile
+    # Must run from /app/packages/server so the CLI resolves migration
+    # paths to ./src/database/*/migrations (relative to the package root).
+    # Running from /app would make it look in /app/src/... which doesn't exist.
+    working_dir: /app/packages/server
     command: >
       sh -c "
-        node packages/server/dist/cli.js system:migrate:latest &&
-        node packages/server/dist/cli.js tenants:migrate:latest
+        node dist/cli.js system:migrate:latest &&
+        node dist/cli.js tenants:migrate:latest
       "
     environment:
       - DB_HOST=mysql
