@@ -1,0 +1,34 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "BigCapital API Server",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@bigcapital/server", "run", "start:dev"],
+      "port": 3000
+    },
+    {
+      "name": "BigCapital Webapp",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@bigcapital/webapp", "run", "dev"],
+      "port": 4000
+    },
+    {
+      "name": "Infrastructure (MariaDB + Redis + Gotenberg)",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "-f", "docker-compose.yml", "up"],
+      "port": 3306
+    },
+    {
+      "name": "Homelab Stack (Full)",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": [
+        "compose",
+        "-f", "docker-compose.homelab.yml",
+        "--env-file", ".env",
+        "up"
+      ],
+      "port": 80
+    }
+  ]
+}

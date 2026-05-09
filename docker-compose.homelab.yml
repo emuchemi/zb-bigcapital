@@ -45,19 +45,27 @@ services:
       retries: 3
 
   # ── BigCapital web interface ───────────────────────────────
-  # The browser-facing React application.
+  # Built from source so Z&B customisations are included.
+  # First build takes 5-10 minutes. Subsequent builds use Docker cache.
   webapp:
     container_name: zb-webapp
-    image: bigcapitalhq/webapp:latest
+    build:
+      context: ./
+      dockerfile: packages/webapp/Dockerfile
+    image: zb-bigcapital-webapp
     restart: unless-stopped
     networks:
       - zb_network
 
   # ── BigCapital API server ──────────────────────────────────
-  # The accounting engine. All business logic lives here.
+  # Built from source so Z&B modules, migrations, and seed data are included.
+  # The image is tagged zb-bigcapital-server so the migration container can reuse it.
   server:
     container_name: zb-server
-    image: bigcapitalhq/server:latest
+    build:
+      context: ./
+      dockerfile: packages/server/Dockerfile
+    image: zb-bigcapital-server
     expose:
       - '3000'
     depends_on:
@@ -145,13 +153,17 @@ services:
       - API_RATE_LIMIT=${API_RATE_LIMIT:-120,60,600}
 
   # ── Database migration ─────────────────────────────────────
-  # Runs once on startup to create/update the database schema.
-  # Exits automatically when done. Safe to re-run.
+  # Runs all Z&B migrations using the custom-built server image.
+  # Exits automatically when done. Safe to re-run on every deploy.
+  # Uses the same image as the server so our new tables are always created.
   database_migration:
     container_name: zb-database-migration
-    build:
-      context: ./
-      dockerfile: docker/migration/Dockerfile
+    image: zb-bigcapital-server
+    command: >
+      sh -c "
+        node packages/server/dist/cli.js system:migrate:latest &&
+        node packages/server/dist/cli.js tenants:migrate:latest
+      "
     environment:
       - DB_HOST=mysql
       - DB_USER=${DB_USER}
@@ -159,6 +171,7 @@ services:
       - DB_CHARSET=${DB_CHARSET:-utf8mb4}
       - SYSTEM_DB_NAME=${SYSTEM_DB_NAME}
       - TENANT_DB_NAME_PERFIX=${TENANT_DB_NAME_PERFIX}
+      - NODE_ENV=production
     depends_on:
       mysql:
         condition: service_healthy
