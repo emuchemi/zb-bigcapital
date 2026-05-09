@@ -19,30 +19,47 @@ export class ZBComplianceApplication {
     private readonly itemModel: TenantModelProxy<typeof ZBComplianceItem>,
   ) {}
 
+  // ── Read methods ────────────────────────────────────────────────────────────
+  // QueryBuilder implements PromiseLike, not the full Promise interface, so
+  // returning one from a Promise<T>-annotated method fails TS2739.
+  // Making each method async and awaiting the builder resolves PromiseLike → T,
+  // allowing TypeScript to wrap it in a real Promise<T>.
+
   /** All compliance items, ordered by due date. */
-  public getAll(): Promise<ZBComplianceItem[]> {
-    return this.itemModel().query().orderBy('due_date', 'asc');
+  public async getAll(): Promise<ZBComplianceItem[]> {
+    return await this.itemModel().query().orderBy('due_date', 'asc');
   }
 
   /** All upcoming items. */
-  public getUpcoming(): Promise<ZBComplianceItem[]> {
-    return this.itemModel().query().modify('upcoming');
+  public async getUpcoming(): Promise<ZBComplianceItem[]> {
+    return await this.itemModel().query().modify('upcoming');
   }
 
   /** Items due within the next N days (default 30). Useful for the dashboard. */
-  public getDueWithinDays(days = 30): Promise<ZBComplianceItem[]> {
-    return this.itemModel().query().modify('dueWithinDays', days);
+  public async getDueWithinDays(days = 30): Promise<ZBComplianceItem[]> {
+    return await this.itemModel().query().modify('dueWithinDays', days);
   }
 
   /** All overdue items (upcoming status but past due date). */
-  public getOverdue(): Promise<ZBComplianceItem[]> {
-    return this.itemModel().query().modify('overdue');
+  public async getOverdue(): Promise<ZBComplianceItem[]> {
+    return await this.itemModel().query().modify('overdue');
   }
 
   /** Single item. */
-  public getOne(id: number): Promise<ZBComplianceItem> {
-    return this.itemModel().query().findById(id).throwIfNotFound();
+  public async getOne(id: number): Promise<ZBComplianceItem> {
+    return await this.itemModel().query().findById(id).throwIfNotFound();
   }
+
+  // ── Write methods ───────────────────────────────────────────────────────────
+  // Two fixes applied inside withTransaction callbacks:
+  //
+  // 1. `{ ...dto } as any` — DTO date fields are string (@IsDateString) but the
+  //    model declares them Date, so PartialModelObject<T> expects Expression<Date>.
+  //    MariaDB stores and returns date columns as strings at runtime, so the cast
+  //    is safe.
+  //
+  // 2. `await` before each query builder — resolves PromiseLike to a concrete T
+  //    so TypeScript doesn't chase the deep QueryBuilder generic chain (TS2589).
 
   /** Creates a new compliance item. */
   public create(
@@ -50,7 +67,7 @@ export class ZBComplianceApplication {
     trx?: Knex.Transaction,
   ): Promise<ZBComplianceItem> {
     return this.uow.withTransaction(async (trx: Knex.Transaction) => {
-      return this.itemModel().query(trx).insertAndFetch({ ...dto });
+      return await this.itemModel().query(trx).insertAndFetch({ ...dto } as any);
     }, trx);
   }
 
@@ -62,7 +79,7 @@ export class ZBComplianceApplication {
   ): Promise<ZBComplianceItem> {
     return this.uow.withTransaction(async (trx: Knex.Transaction) => {
       await this.itemModel().query().findById(id).throwIfNotFound();
-      return this.itemModel().query(trx).patchAndFetchById(id, { ...dto });
+      return await this.itemModel().query(trx).patchAndFetchById(id, { ...dto } as any);
     }, trx);
   }
 
@@ -75,7 +92,7 @@ export class ZBComplianceApplication {
     const completedAt = dto.completedAt ?? new Date().toISOString().split('T')[0];
     return this.uow.withTransaction(async (trx: Knex.Transaction) => {
       await this.itemModel().query().findById(id).throwIfNotFound();
-      return this.itemModel().query(trx).patchAndFetchById(id, {
+      return await this.itemModel().query(trx).patchAndFetchById(id, {
         status: ComplianceStatus.Completed,
         completedAt,
         referenceNumber: dto.referenceNumber,

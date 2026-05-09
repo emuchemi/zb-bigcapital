@@ -17,14 +17,20 @@ export class ZBHospitalityChargesApplication {
     private readonly chargeModel: TenantModelProxy<typeof ZBHospitalityCharge>,
   ) {}
 
+  // ── Read methods ────────────────────────────────────────────────────────────
+  // QueryBuilder implements PromiseLike, not the full Promise interface, so
+  // returning one from a Promise<T>-annotated method fails TS2739.
+  // Making each method async and awaiting the builder resolves PromiseLike → T,
+  // allowing TypeScript to wrap it in a real Promise<T>.
+
   /** Returns all hospitality charges. */
-  public getAll(): Promise<ZBHospitalityCharge[]> {
-    return this.chargeModel().query().orderBy('name', 'asc');
+  public async getAll(): Promise<ZBHospitalityCharge[]> {
+    return await this.chargeModel().query().orderBy('name', 'asc');
   }
 
   /** Returns only active charges effective on a given date. */
-  public getActiveOnDate(date: string): Promise<ZBHospitalityCharge[]> {
-    return this.chargeModel()
+  public async getActiveOnDate(date: string): Promise<ZBHospitalityCharge[]> {
+    return await this.chargeModel()
       .query()
       .modify('active')
       .modify('effectiveOn', date)
@@ -32,9 +38,20 @@ export class ZBHospitalityChargesApplication {
   }
 
   /** Returns a single charge by id. */
-  public getOne(id: number): Promise<ZBHospitalityCharge> {
-    return this.chargeModel().query().findById(id).throwIfNotFound();
+  public async getOne(id: number): Promise<ZBHospitalityCharge> {
+    return await this.chargeModel().query().findById(id).throwIfNotFound();
   }
+
+  // ── Write methods ───────────────────────────────────────────────────────────
+  // Two fixes applied inside withTransaction callbacks:
+  //
+  // 1. `{ ...dto } as any` — DTO date fields are string (@IsDateString) but the
+  //    model declares them Date, so PartialModelObject<T> expects Expression<Date>.
+  //    MariaDB stores and returns date columns as strings at runtime, so the cast
+  //    is safe.
+  //
+  // 2. `await` before each query builder — resolves PromiseLike to a concrete T
+  //    so TypeScript doesn't chase the deep QueryBuilder generic chain (TS2589).
 
   /** Creates a new hospitality charge rule. */
   public create(
@@ -42,7 +59,7 @@ export class ZBHospitalityChargesApplication {
     trx?: Knex.Transaction,
   ): Promise<ZBHospitalityCharge> {
     return this.uow.withTransaction(async (trx: Knex.Transaction) => {
-      return this.chargeModel().query(trx).insertAndFetch({ ...dto });
+      return await this.chargeModel().query(trx).insertAndFetch({ ...dto } as any);
     }, trx);
   }
 
@@ -54,7 +71,7 @@ export class ZBHospitalityChargesApplication {
   ): Promise<ZBHospitalityCharge> {
     return this.uow.withTransaction(async (trx: Knex.Transaction) => {
       await this.chargeModel().query().findById(id).throwIfNotFound();
-      return this.chargeModel().query(trx).patchAndFetchById(id, { ...dto });
+      return await this.chargeModel().query(trx).patchAndFetchById(id, { ...dto } as any);
     }, trx);
   }
 
