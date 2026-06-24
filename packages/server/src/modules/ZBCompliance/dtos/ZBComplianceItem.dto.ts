@@ -1,6 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { ToNumber } from '@/common/decorators/Validators';
+import { parseBoolean } from '@/utils/parse-boolean';
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -101,6 +104,17 @@ export class CommandZBComplianceItemDto {
   @IsOptional()
   @ApiProperty({ enum: ComplianceRecurrence, example: ComplianceRecurrence.Monthly, required: false })
   recurrence?: ComplianceRecurrence;
+
+  @IsBoolean()
+  @Transform(({ value }) => parseBoolean(value, false))
+  @IsOptional()
+  @ApiProperty({
+    example: false,
+    required: false,
+    description:
+      'If true and recurrence is not "once", completing this item auto-creates the next occurrence.',
+  })
+  autoRecur?: boolean;
 }
 
 export class CreateZBComplianceItemDto extends CommandZBComplianceItemDto {}

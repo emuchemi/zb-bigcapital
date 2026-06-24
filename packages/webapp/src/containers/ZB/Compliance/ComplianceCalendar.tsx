@@ -11,6 +11,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Button,
   ButtonGroup,
+  Checkbox,
   Classes,
   Dialog,
   FormGroup,
@@ -92,6 +93,7 @@ const emptyForm = {
   currency: 'TZS',
   responsiblePerson: '',
   recurrence: 'once',
+  autoRecur: false,
   notes: '',
 };
 
@@ -113,6 +115,7 @@ function ComplianceDialog({ isOpen, onClose, editing }) {
               currency: editing.currency || 'TZS',
               responsiblePerson: editing.responsiblePerson || '',
               recurrence: editing.recurrence || 'once',
+              autoRecur: !!editing.autoRecur,
               notes: editing.notes || '',
             }
           : emptyForm,
@@ -130,6 +133,7 @@ function ComplianceDialog({ isOpen, onClose, editing }) {
       dueDate: form.dueDate,
       currency: form.currency || 'TZS',
       recurrence: form.recurrence,
+      autoRecur: form.recurrence !== 'once' ? form.autoRecur : false,
       responsiblePerson: form.responsiblePerson || undefined,
       notes: form.notes || undefined,
       amountDue:
@@ -198,6 +202,19 @@ function ComplianceDialog({ isOpen, onClose, editing }) {
             />
           </FormGroup>
         </div>
+        <Checkbox
+          checked={form.autoRecur}
+          disabled={form.recurrence === 'once'}
+          label="Auto-create the next one when this is marked complete"
+          onChange={(e) =>
+            setForm((f) => ({ ...f, autoRecur: e.target.checked }))
+          }
+        />
+        {form.recurrence === 'once' && (
+          <div className={Classes.TEXT_MUTED} style={{ fontSize: 12, marginTop: -6, marginBottom: 8 }}>
+            Set a recurrence above to enable auto-create.
+          </div>
+        )}
         <FormGroup label="Responsible person">
           <InputGroup
             value={form.responsiblePerson}
