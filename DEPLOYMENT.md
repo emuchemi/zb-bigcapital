@@ -245,6 +245,38 @@ docker compose -f docker-compose.homelab.yml up -d
 
 ---
 
+## Auto-start on boot (power-loss recovery)
+
+After an ungraceful reboot (e.g. a power cut), Docker restarts containers via
+their restart policy **but ignores compose `depends_on` ordering** — so the
+one-shot setup containers run before the database is ready and exit, and Nginx
+crash-loops. The result: the stack can come back up broken.
+
+To make it self-heal, install a small systemd service that runs the compose
+bring-up (in dependency order) on every boot, after Docker starts:
+
+```bash
+# Copy the unit from the repo into systemd
+cp /opt/zb-bigcapital/docker/systemd/zb-bigcapital.service /etc/systemd/system/
+
+# Enable it (runs on boot) and start it now
+systemctl daemon-reload
+systemctl enable --now zb-bigcapital.service
+
+# Verify
+systemctl status zb-bigcapital.service
+```
+
+After this, a power cut recovers automatically. If you ever need to bring the
+stack up manually, that's the same command the service runs:
+
+```bash
+cd /opt/zb-bigcapital
+docker compose -f docker-compose.homelab.yml --env-file .env up -d
+```
+
+---
+
 ## Backups
 
 **Never skip backups. Your financial records are stored in MariaDB and MinIO.**
