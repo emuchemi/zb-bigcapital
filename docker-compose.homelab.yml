@@ -148,9 +148,15 @@ services:
       - BANK_FEED_ENABLED=false
       - HOSTED_ON_BIGCAPITAL_CLOUD=false
 
-      # ── API rate limiting ──────────────────────────────────
-      # Format: points,duration_seconds,block_duration_seconds
-      - API_RATE_LIMIT=${API_RATE_LIMIT:-120,60,600}
+      # ── API rate limiting (Redis-backed throttler) ─────────
+      # These are the variables the server actually reads. TTL is in ms.
+      # Global default upstream is only 100 req/min, which the setup wizard
+      # and the SPA's parallel calls exceed (causing 429 "too many requests"
+      # during org initialisation), so we raise it. Auth limit guards login.
+      - THROTTLE_GLOBAL_TTL=${THROTTLE_GLOBAL_TTL:-60000}
+      - THROTTLE_GLOBAL_LIMIT=${THROTTLE_GLOBAL_LIMIT:-5000}
+      - THROTTLE_AUTH_TTL=${THROTTLE_AUTH_TTL:-60000}
+      - THROTTLE_AUTH_LIMIT=${THROTTLE_AUTH_LIMIT:-50}
 
   # ── Database migration ─────────────────────────────────────
   # Runs all Z&B migrations. Exits automatically when done.
