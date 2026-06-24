@@ -245,6 +245,16 @@ export const API_KEYS = {
   API_KEYS: 'API_KEYS',
 };
 
+// Z&B custom features (founder dashboard, compliance calendar, hospitality charges).
+const ZB = {
+  ZB_DASHBOARD: 'ZB_DASHBOARD',
+  ZB_COMPLIANCE: 'ZB_COMPLIANCE',
+  ZB_COMPLIANCE_ITEM: 'ZB_COMPLIANCE_ITEM',
+  ZB_HOSPITALITY_CHARGES: 'ZB_HOSPITALITY_CHARGES',
+  ZB_HOSPITALITY_CHARGE: 'ZB_HOSPITALITY_CHARGE',
+  ZB_EXPENSE_INBOX: 'ZB_EXPENSE_INBOX',
+};
+
 export default {
   ...Authentication,
   ...ACCOUNTS,
@@ -281,4 +291,5 @@ export default {
   ...TAX_RATES,
   ...EXCHANGE_RATE,
   ...API_KEYS,
+  ...ZB,
 };

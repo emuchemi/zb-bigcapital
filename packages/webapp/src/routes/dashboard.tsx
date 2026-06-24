@@ -7,6 +7,37 @@ const SUBSCRIPTION_TYPE = {
   MAIN: 'main',
 };
 export const getDashboardRoutes = () => [
+  // Z&B custom features.
+  {
+    path: `/zb/dashboard`,
+    component: lazy(
+      () => import('@/containers/ZB/FounderDashboard/FounderDashboard'),
+    ),
+    breadcrumb: 'Founder Dashboard',
+    pageTitle: 'Founder Dashboard',
+  },
+  {
+    path: `/zb/compliance`,
+    component: lazy(
+      () => import('@/containers/ZB/Compliance/ComplianceCalendar'),
+    ),
+    breadcrumb: 'Compliance Calendar',
+    pageTitle: 'Compliance Calendar',
+  },
+  {
+    path: `/zb/hospitality-charges`,
+    component: lazy(
+      () => import('@/containers/ZB/Hospitality/HospitalityCharges'),
+    ),
+    breadcrumb: 'Hospitality Charges',
+    pageTitle: 'Hospitality Charges',
+  },
+  {
+    path: `/zb/expense-inbox`,
+    component: lazy(() => import('@/containers/ZB/ExpenseInbox/ExpenseInbox')),
+    breadcrumb: 'Expense Inbox',
+    pageTitle: 'Expense Inbox',
+  },
   // Accounts.
   {
     path: '/accounts/import',
