@@ -16,7 +16,12 @@ export const TenancyDatabaseProxyProvider = ClsModule.forFeatureAsync({
   inject: [ConfigService, ClsService],
   useFactory: async (configService: ConfigService, cls: ClsService) => () => {
     const organizationId = cls.get('organizationId');
-    const database = `bigcapital_tenant_${organizationId}`;
+    // Use the configurable tenant DB prefix (TENANT_DB_NAME_PERFIX), matching
+    // TenantDBManager and the CLI commands. Previously hardcoded to
+    // 'bigcapital_tenant_', which broke any deployment using a custom prefix
+    // (the DB is created as <prefix><org> but this connected to the default).
+    const prefix = configService.get('tenantDatabase.dbNamePrefix');
+    const database = `${prefix}${organizationId}`;
     const cachedInstance = lruCache.get(database);
 
     if (cachedInstance) {

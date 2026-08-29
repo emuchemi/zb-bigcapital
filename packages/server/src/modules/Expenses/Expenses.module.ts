@@ -23,6 +23,7 @@ import { BulkDeleteExpensesService } from './BulkDeleteExpenses.service';
 import { ValidateBulkDeleteExpensesService } from './ValidateBulkDeleteExpenses.service';
 import { GetExpenseInboxService } from './queries/GetExpenseInbox.service';
 import { SubmitExpenseForReviewService } from './commands/SubmitExpenseForReview.service';
+import { ZBExpenseStatusSubscriber } from './subscribers/ZBExpenseStatus.subscriber';
 
 @Module({
   imports: [LedgerModule, BranchesModule, DynamicListModule],
@@ -49,6 +50,7 @@ import { SubmitExpenseForReviewService } from './commands/SubmitExpenseForReview
     ValidateBulkDeleteExpensesService,
     GetExpenseInboxService,
     SubmitExpenseForReviewService,
+    ZBExpenseStatusSubscriber,
   ],
 })
 export class ExpensesModule {}

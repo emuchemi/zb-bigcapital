@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { raw } from 'objection';
 import { Account } from '@/modules/Accounts/models/Account.model';
 import { AccountTransaction } from '@/modules/Accounts/models/AccountTransaction.model';
 import { Expense } from '@/modules/Expenses/models/Expense.model';
@@ -107,6 +108,13 @@ export interface ZBDashboardData {
   overdueComplianceCount: number;
 }
 
+// Multiply an amount column by its transaction exchange rate to get the
+// base-currency (TZS) equivalent. NULL or 0 rates are treated as 1 so
+// base-currency (TZS) rows — where the rate is implicitly 1 — are not zeroed.
+const RATE = 'COALESCE(NULLIF(exchange_rate, 0), 1)';
+const SUM_DEBIT_TZS = `COALESCE(SUM(debit * ${RATE}), 0) as totalDebitBase`;
+const SUM_CREDIT_TZS = `COALESCE(SUM(credit * ${RATE}), 0) as totalCreditBase`;
+
 // ── Service ─────────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -182,29 +190,29 @@ export class ZBDashboardService {
   // ── Cash position ───────────────────────────────────────────────────────
 
   private async getCashPosition() {
-    // Fetch all bank and cash accounts
+    // Bank and cash accounts only (excludes other current assets, which are
+    // not cash and would overstate the position).
     const cashAccounts = await this.accountModel()
       .query()
-      .whereIn('account_type', ['bank', 'cash', 'other-current-asset'])
+      .whereIn('account_type', ['bank', 'cash'])
       .where('active', true)
       .select('id', 'name', 'code', 'account_type', 'currency_code');
 
-    // For each account, sum its GL transactions to get balance
     const accountIds = cashAccounts.map((a) => a.id);
 
     if (accountIds.length === 0) {
       return { accounts: [], totalTZS: 0 };
     }
 
-    // Sum debit and credit per account
+    // Per-account balance in the account's own currency (native), for display.
     const balances: Array<{ accountId: number; totalDebit: string; totalCredit: string }> =
-      await this.transactionModel()
+      (await this.transactionModel()
         .query()
         .select('account_id as accountId')
         .sum('debit as totalDebit')
         .sum('credit as totalCredit')
         .whereIn('account_id', accountIds)
-        .groupBy('account_id') as any;
+        .groupBy('account_id')) as any;
 
     const balanceMap = new Map(
       balances.map((b) => [
@@ -222,11 +230,17 @@ export class ZBDashboardService {
       balance: balanceMap.get(account.id) ?? 0,
     }));
 
-    // Total in TZS (for accounts in TZS, use balance directly;
-    // for foreign currency, exchange rate conversion happens at transaction level)
-    const totalTZS = accounts
-      .filter((a) => a.currencyCode === 'TZS')
-      .reduce((sum, a) => sum + a.balance, 0);
+    // Consolidated TZS total across ALL currencies, using each transaction's
+    // stored exchange rate (debit/credit are in the account currency).
+    const baseRow: any = await this.transactionModel()
+      .query()
+      .select(raw(SUM_DEBIT_TZS))
+      .select(raw(SUM_CREDIT_TZS))
+      .whereIn('account_id', accountIds)
+      .first();
+
+    const totalTZS =
+      Number(baseRow?.totalDebitBase ?? 0) - Number(baseRow?.totalCreditBase ?? 0);
 
     return { accounts, totalTZS };
   }
@@ -262,12 +276,20 @@ export class ZBDashboardService {
 
   private async getUnpaidBills() {
     // openedAt NOT NULL = published/open bill (null = still a draft)
-    // Remaining balance = amount - paymentAmount - creditedAmount
+    // Remaining balance = amount - paymentAmount - creditedAmount (bill currency),
+    // converted to TZS via the bill's stored exchange rate.
     const unpaidBills = await this.billModel()
       .query()
       .whereNotNull('opened_at')
       .whereRaw('amount > (COALESCE(payment_amount, 0) + COALESCE(credited_amount, 0))')
-      .select('id', 'amount', 'payment_amount as paymentAmount', 'credited_amount as creditedAmount', 'currency_code as currencyCode');
+      .select(
+        'id',
+        'amount',
+        'payment_amount as paymentAmount',
+        'credited_amount as creditedAmount',
+        'currency_code as currencyCode',
+        'exchange_rate as exchangeRate',
+      );
 
     const count = unpaidBills.length;
     const totalAmount = unpaidBills.reduce((sum, bill: any) => {
@@ -275,7 +297,8 @@ export class ZBDashboardService {
         Number(bill.amount) -
         Number(bill.paymentAmount ?? 0) -
         Number(bill.creditedAmount ?? 0);
-      return sum + Math.max(unpaid, 0);
+      const rate = Number(bill.exchangeRate) || 1;
+      return sum + Math.max(unpaid, 0) * rate;
     }, 0);
 
     return { count, totalAmount, currencyCode: 'TZS' };
@@ -293,15 +316,17 @@ export class ZBDashboardService {
       return { count: 0, totalAmount: 0, currencyCode: 'TZS' };
     }
 
+    // Balance in TZS via per-transaction exchange rate.
     const result: any = await this.transactionModel()
       .query()
-      .sum('debit as totalDebit')
-      .sum('credit as totalCredit')
+      .select(raw(SUM_DEBIT_TZS))
+      .select(raw(SUM_CREDIT_TZS))
       .countDistinct('reference_id as count')
       .where('account_id', arAccount.id)
       .first();
 
-    const balance = Number(result?.totalDebit ?? 0) - Number(result?.totalCredit ?? 0);
+    const balance =
+      Number(result?.totalDebitBase ?? 0) - Number(result?.totalCreditBase ?? 0);
 
     return {
       count: Number(result?.count ?? 0),
@@ -314,12 +339,12 @@ export class ZBDashboardService {
 
   private async getExpenseInboxCounts() {
     const counts: Array<{ zbStatus: string; count: string }> =
-      await this.expenseModel()
+      (await this.expenseModel()
         .query()
         .select('zb_status as zbStatus')
         .count('id as count')
         .whereIn('zb_status', ['draft', 'pending_review'])
-        .groupBy('zb_status') as any;
+        .groupBy('zb_status')) as any;
 
     const draftCount = Number(
       counts.find((c) => c.zbStatus === 'draft')?.count ?? 0,
@@ -373,16 +398,16 @@ export class ZBDashboardService {
 
     const incomeAccountIds = incomeAccounts.map((a) => a.id);
 
-    // For income accounts, credits = revenue
+    // Per-currency revenue (native amounts), for the breakdown.
     const rows: Array<{ currencyCode: string; totalCredit: string; totalDebit: string }> =
-      await this.transactionModel()
+      (await this.transactionModel()
         .query()
         .select('currency_code as currencyCode')
         .sum('credit as totalCredit')
         .sum('debit as totalDebit')
         .whereIn('account_id', incomeAccountIds)
         .whereBetween('date', [monthStart, monthEnd])
-        .groupBy('currency_code') as any;
+        .groupBy('currency_code')) as any;
 
     const byCurrency: CurrencyAmount[] = rows.map((row) => ({
       currencyCode: row.currencyCode,
@@ -390,9 +415,17 @@ export class ZBDashboardService {
       amount: Number(row.totalCredit) - Number(row.totalDebit),
     }));
 
-    const totalTZS = byCurrency
-      .filter((c) => c.currencyCode === 'TZS')
-      .reduce((sum, c) => sum + c.amount, 0);
+    // Consolidated TZS total across all currencies via stored exchange rates.
+    const baseRow: any = await this.transactionModel()
+      .query()
+      .select(raw(SUM_CREDIT_TZS))
+      .select(raw(SUM_DEBIT_TZS))
+      .whereIn('account_id', incomeAccountIds)
+      .whereBetween('date', [monthStart, monthEnd])
+      .first();
+
+    const totalTZS =
+      Number(baseRow?.totalCreditBase ?? 0) - Number(baseRow?.totalDebitBase ?? 0);
 
     return { byCurrency, totalTZS };
   }
@@ -412,17 +445,17 @@ export class ZBDashboardService {
 
     const expenseAccountIds = expenseAccounts.map((a) => a.id);
 
-    // For expense accounts, debits = spending
+    // Spending in TZS via per-transaction exchange rate (debits = spending).
     const result: any = await this.transactionModel()
       .query()
-      .sum('debit as totalDebit')
-      .sum('credit as totalCredit')
+      .select(raw(SUM_DEBIT_TZS))
+      .select(raw(SUM_CREDIT_TZS))
       .whereIn('account_id', expenseAccountIds)
       .whereBetween('date', [monthStart, monthEnd])
       .first();
 
     const totalTZS = Math.max(
-      Number(result?.totalDebit ?? 0) - Number(result?.totalCredit ?? 0),
+      Number(result?.totalDebitBase ?? 0) - Number(result?.totalCreditBase ?? 0),
       0,
     );
 

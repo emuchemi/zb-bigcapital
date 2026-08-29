@@ -6,8 +6,12 @@ WORKDIR /app
 # Install pnpm
 RUN npm install -g pnpm@9.0.5
 
-# Install build dependencies
-RUN apk add --no-cache python3 build-base chromium
+# Install build dependencies.
+# NOTE: chromium removed — it was never needed here. The builder stage only
+# compiles the app, the production stage never copies chromium in, and PDF
+# generation runs through the separate Gotenberg container (Chromiumly is just
+# a Gotenberg client). Installing it added ~400MB and a slow, fragile apk step.
+RUN apk add --no-cache python3 build-base
 
 # Set Python environment
 ENV PYTHON=/usr/bin/python3

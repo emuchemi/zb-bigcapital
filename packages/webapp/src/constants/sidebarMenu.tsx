@@ -40,6 +40,35 @@ export const SidebarMenu = [
     matchExact: true,
   },
   // ---------------
+  // # Zahir & Batin
+  // ---------------
+  {
+    text: 'Zahir & Batin',
+    type: ISidebarMenuItemType.Group,
+    children: [
+      {
+        text: 'Founder Dashboard',
+        href: '/zb/dashboard',
+        type: ISidebarMenuItemType.Link,
+      },
+      {
+        text: 'Expense Inbox',
+        href: '/zb/expense-inbox',
+        type: ISidebarMenuItemType.Link,
+      },
+      {
+        text: 'Compliance Calendar',
+        href: '/zb/compliance',
+        type: ISidebarMenuItemType.Link,
+      },
+      {
+        text: 'Hospitality Charges',
+        href: '/zb/hospitality-charges',
+        type: ISidebarMenuItemType.Link,
+      },
+    ],
+  },
+  // ---------------
   // # Sales & Inventory
   // ---------------
   {

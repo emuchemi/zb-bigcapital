@@ -6,8 +6,11 @@ WORKDIR /app
 # Install pnpm
 RUN npm install -g pnpm@9.0.5
 
-# Install build dependencies
-RUN apk add --no-cache python3 build-base chromium
+# Install build dependencies.
+# NOTE: chromium removed — the builder only runs the Vite build, and the final
+# image is plain nginx serving static assets. Chromium was never used and added
+# ~400MB plus a slow, fragile apk step.
+RUN apk add --no-cache python3 build-base
 
 # Set Python environment
 ENV PYTHON=/usr/bin/python3

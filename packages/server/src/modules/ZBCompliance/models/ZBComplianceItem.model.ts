@@ -14,6 +14,7 @@ export class ZBComplianceItem extends TenantBaseModel {
   completedAt?: Date;
   referenceNumber?: string;
   recurrence!: 'once' | 'monthly' | 'quarterly' | 'annually';
+  autoRecur!: boolean;
   createdAt!: Date;
   updatedAt!: Date;
 

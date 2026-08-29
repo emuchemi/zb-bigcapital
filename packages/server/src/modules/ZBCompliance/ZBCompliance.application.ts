@@ -83,7 +83,11 @@ export class ZBComplianceApplication {
     }, trx);
   }
 
-  /** Marks a compliance item as completed. */
+  /**
+   * Marks a compliance item as completed. If the item has auto_recur enabled
+   * and a recurrence other than 'once', the next occurrence is created
+   * automatically (same details, due date advanced by the recurrence interval).
+   */
   public complete(
     id: number,
     dto: CompleteZBComplianceItemDto,
@@ -91,14 +95,45 @@ export class ZBComplianceApplication {
   ): Promise<ZBComplianceItem> {
     const completedAt = dto.completedAt ?? new Date().toISOString().split('T')[0];
     return this.uow.withTransaction(async (trx: Knex.Transaction) => {
-      await this.itemModel().query().findById(id).throwIfNotFound();
-      return await this.itemModel().query(trx).patchAndFetchById(id, {
+      const item: any = await this.itemModel()
+        .query(trx)
+        .findById(id)
+        .throwIfNotFound();
+
+      const updated = await this.itemModel().query(trx).patchAndFetchById(id, {
         status: ComplianceStatus.Completed,
         completedAt,
         referenceNumber: dto.referenceNumber,
         notes: dto.notes,
       } as any);
+
+      if (item.autoRecur && item.recurrence && item.recurrence !== 'once') {
+        await this.itemModel().query(trx).insert({
+          name: item.name,
+          itemType: item.itemType,
+          dueDate: this.advanceDueDate(item.dueDate, item.recurrence),
+          amountDue: item.amountDue,
+          currency: item.currency,
+          status: ComplianceStatus.Upcoming,
+          responsiblePerson: item.responsiblePerson,
+          linkedAccountId: item.linkedAccountId,
+          notes: item.notes,
+          recurrence: item.recurrence,
+          autoRecur: true,
+        } as any);
+      }
+
+      return updated;
     }, trx);
+  }
+
+  /** Advances a due date by one recurrence interval, returns YYYY-MM-DD. */
+  private advanceDueDate(dueDate: any, recurrence: string): string {
+    const d = new Date(dueDate);
+    if (recurrence === 'monthly') d.setMonth(d.getMonth() + 1);
+    else if (recurrence === 'quarterly') d.setMonth(d.getMonth() + 3);
+    else if (recurrence === 'annually') d.setFullYear(d.getFullYear() + 1);
+    return d.toISOString().split('T')[0];
   }
 
   /** Deletes a compliance item. */

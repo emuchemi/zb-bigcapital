@@ -1,0 +1,19 @@
+[Unit]
+Description=Z&B BigCapital stack (docker compose) auto-recovery on boot
+Documentation=https://github.com/emuchemi/zb-bigcapital
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/zb-bigcapital
+# Reconcile the whole stack in dependency order (honors compose depends_on),
+# which Docker's per-container restart policy does NOT do after a reboot.
+ExecStart=/usr/bin/docker compose -f docker-compose.homelab.yml --env-file .env up -d
+# Give the first-boot DB/MinIO health waits room to complete.
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target
